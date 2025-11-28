@@ -18,16 +18,15 @@ async def attack_reply(message: types.Message):
     if not att_user or not tar_user:
         return
 
-    # دمیج ساده (بعداً می‌تونی ترکیب اضافه کنی)
     damage = random.randint(800, 1800)
-    loot = int(damage * 0.08)  # ۸٪ غارت
+    loot = int(damage * 0.08)
 
-    await update_user(attacker, zp=att_user["zp"] + loot)
-    await update_user(target, zp=max(0, tar_user["zp"] - loot))
+    await update_user(attacker, zp=att_user['zp'] + loot)
+    await update_user(target, zp=max(0, tar_user['zp'] - loot))
 
     await message.answer(f"""
 حمله موفق!
 
-دمیج وارد شده: {damage:,} ⚔️
+دمیج: {damage:,} ⚔️
 غارت ZP: +{loot:,} 💰
     """.strip())
