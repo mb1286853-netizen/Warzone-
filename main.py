@@ -11,14 +11,15 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 if not TOKEN:
-    raise ValueError("توکن پیدا نشد!")
+    raise ValueError("توکن بات در .env یا Environment پیدا نشد!")
 
 logging.basicConfig(level=logging.INFO)
+
 bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 
-# لود خودکار همه روترها
-print("شروع لود روترها...")
+# لود خودکار همه روترها از پوشه handlers
+print("در حال لود روترها...")
 for file in os.listdir("handlers"):
     if file.endswith(".py") and file != "__init__.py":
         name = file[:-3]
@@ -28,24 +29,28 @@ for file in os.listdir("handlers"):
                 dp.include_router(mod.router)
                 print(f"✓ روتر {name} لود شد")
         except Exception as e:
-            print(f"✗ خطا در {name}: {e}")
+            print(f"✗ خطا در لود {name}: {e}")
 
+# تنظیم وب‌هوک هنگام استارت
 async def on_startup(*args):
     try:
         url = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME', 'warzone-xgnp.onrender.com')}/webhook"
         await bot.delete_webhook(drop_pending_updates=True)
         await bot.set_webhook(url=url)
-        print(f"وب‌هوک ست شد → {url}")
+        print(f"وب‌هوک با موفقیت ست شد: {url}")
     except Exception as e:
-        print(f"خطا در وب‌هوک: {e}")
+        print(f"خطا در تنظیم وب‌هوک: {e}")
 
+# صفحه اصلی برای تست زنده بودن
 async def index(_):
     return web.Response(text="WarZone Bot زنده‌ست! ⚔️")
 
+# راه‌اندازی سرور
 app = web.Application()
+
 dp.startup.register(on_startup)
 SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
 app.router.add_get("/", index)
 
 if __name__ == "__main__":
-    web.run_app(app, port=int(os.environ.get("PORT", 8000)))
+    web.run_app(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
