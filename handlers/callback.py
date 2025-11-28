@@ -1,3 +1,5 @@
+from aiogram import Router
+router = Router()
 from aiogram import Router, types
 from keyboards import main_menu
 
