@@ -1,36 +1,48 @@
 import logging
+import os
+import importlib
 from aiohttp import web
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.filters import Command
-import os
 from dotenv import load_dotenv
 
+# لود متغیرهای محیطی
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 if not TOKEN:
-    raise ValueError("توکن پیدا نشد!")
+    raise ValueError("توکن بات در .env پیدا نشد!")
 
 logging.basicConfig(level=logging.INFO)
+
+# ساخت بات و دیسپچر
 bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 
-# هندلرهای اصلی
-from handlers import start, profile, attack, shop, boxes, miner, defense, support, callback
+# -------------------------------
+# لود خودکار همه روترها از پوشه handlers
+# -------------------------------
+handlers_path = os.path.join(os.path.dirname(__file__), "handlers")
+if os.path.isdir(handlers_path):
+    for filename in os.listdir(handlers_path):
+        if filename.endswith(".py") and filename not in ["__init__.py"]:
+            module_name = filename[:-3]  # حذف .py
+            try:
+                module = importlib.import_module(f"handlers.{module_name}")
+                if hasattr(module, "router"):
+                    dp.include_router(module.router)
+                    print(f"✓ روتر {module_name} با موفقیت لود شد")
+                else:
+                    print(f"⚠ فایل {filename} router نداره!")
+            except Exception as e:
+                print(f"✗ خطا در لود {filename}: {e}")
+else:
+    print("پوشه handlers پیدا نشد!")
 
-# ثبت همه روترها
-dp.include_router(start.router)
-dp.include_router(profile.router)
-dp.include_router(attack.router)
-dp.include_router(shop.router)
-dp.include_router(boxes.router)
-dp.include_router(miner.router)
-dp.include_router(defense.router)
-dp.include_router(support.router)
-dp.include_router(callback.router)
-
+# -------------------------------
+# تنظیمات وب‌هوک
+# -------------------------------
 async def on_startup(dispatcher: Dispatcher, bot: Bot):
     webhook_url = f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/webhook"
     await bot.set_webhook(url=webhook_url)
@@ -38,23 +50,30 @@ async def on_startup(dispatcher: Dispatcher, bot: Bot):
     print("WarZone Bot 24 ساعته و بدون خواب آنلاین شد! ⚔️")
 
 async def on_shutdown(dispatcher: Dispatcher, bot: Bot):
-    await bot.delete_webhook()
+    await bot.delete_webhook(drop_pending_updates=True)
     await bot.session.close()
+    print("بات خاموش شد.")
 
+# صفحه اصلی برای تست زنده بودن
 async def index(request):
     return web.Response(text="WarZone Bot زنده‌ست! ⚔️")
 
+# -------------------------------
+# اجرای سرور
+# -------------------------------
 def main():
     app = web.Application()
     app["bot"] = bot
-    app["dp"] = dp
 
+    # ثبت استارتاپ و شات‌داون
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 
+    # ثبت وب‌هوک
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
     app.router.add_get("/", index)
 
+    # پورت Render
     port = int(os.environ.get("PORT", 8000))
     web.run_app(app, host="0.0.0.0", port=port)
 
