@@ -1,34 +1,23 @@
 from aiogram import Router, types
-from database import get_user
-from keyboards import back_kb
-from utils import get_league
 
 router = Router()
 
 @router.callback_query(lambda c: c.data == "profile")
 async def show_profile(call: types.CallbackQuery):
-    user = await get_user(call.from_user.id)
-    if not user:
-        return
-
+    # فعلاً ساده، بعداً database رو وصل می‌کنیم
     text = f"""
-پروفایل شما
+👤 پروفایل شما
 
 نام: {call.from_user.full_name}
 آیدی: <code>{call.from_user.id}</code>
 
-سطح: {user['level']}
-تجربه: {user['exp']:,}
-قدرت: {user['power']:,}
-ZP: {user['zp']:,}
-Gem: {user['gem']}
-ماینر: لِوِل {user['miner_level']}
-لیگ: {get_league(user['power'])}
-
-جنگنده‌ها: {sum(user['fighters'].values())}
-موشک‌ها: {sum(user['missiles'].values())}
-پدافند: {sum(user['defenses'].values())}
+سطح: 1
+ZP: 0
+Gem: 0
+لیگ: برنز
     """.strip()
-
-    await call.message.edit_text(text, reply_markup=back_kb())
+    kb = types.InlineKeyboardMarkup(inline_keyboard=[[
+        types.InlineKeyboardButton("🔙 برگشت", callback_data="back")
+    ]])
+    await call.message.edit_text(text, reply_markup=kb)
     await call.answer()
