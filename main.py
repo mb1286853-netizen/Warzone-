@@ -1,4 +1,3 @@
-import logging
 import os
 import importlib
 from aiohttp import web
@@ -6,51 +5,35 @@ from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from dotenv import load_dotenv
 
-load_dotenv()
+# توکن مستقیم از محیط (دیگه dotenv هم لازم نیست)
 TOKEN = os.getenv("TOKEN")
 if not TOKEN:
-    raise ValueError("توکن بات در .env یا Environment پیدا نشد!")
-
-logging.basicConfig(level=logging.INFO)
+    raise ValueError("TOKEN پیدا نشد!")
 
 bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 
-# لود خودکار همه روترها از پوشه handlers
-print("در حال لود روترها...")
-for file in os.listdir("handlers"):
-    if file.endswith(".py") and file != "__init__.py":
-        name = file[:-3]
-        try:
-            mod = importlib.import_module(f"handlers.{name}")
-            if hasattr(mod, "router"):
-                dp.include_router(mod.router)
-                print(f"✓ روتر {name} لود شد")
-        except Exception as e:
-            print(f"✗ خطا در لود {name}: {e}")
+# فقط start رو دستی لود می‌کنیم — بقیه هر چی شد شد
+try:
+    from handlers.start import router as start_router
+    dp.include_router(start_router)
+    print("✓ فقط start لود شد — بقیه مهم نیست")
+except Exception as e:
+    print(f"حتی start هم لود نشد: {e}")
 
-# تنظیم وب‌هوک هنگام استارت
-async def on_startup(*args):
-    try:
-        url = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME', 'warzone-xgnp.onrender.com')}/webhook"
-        await bot.delete_webhook(drop_pending_updates=True)
-        await bot.set_webhook(url=url)
-        print(f"وب‌هوک با موفقیت ست شد: {url}")
-    except Exception as e:
-        print(f"خطا در تنظیم وب‌هوک: {e}")
+# وب‌هوک اجباری
+async def on_startup(*_):
+    url = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME', 'warzone-xgnp.onrender.com')}/webhook"
+    await bot.set_webhook(url=url, drop_pending_updates=True)
+    print(f"وب‌هوک ست شد: {url}")
 
-# صفحه اصلی برای تست زنده بودن
 async def index(_):
-    return web.Response(text="WarZone Bot زنده‌ست! ⚔️")
+    return web.Response(text="بات زنده‌ست!")
 
-# راه‌اندازی سرور
 app = web.Application()
-
 dp.startup.register(on_startup)
 SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
 app.router.add_get("/", index)
 
-if __name__ == "__main__":
-    web.run_app(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+web.run_app(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
