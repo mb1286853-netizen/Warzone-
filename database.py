@@ -33,9 +33,9 @@ async def get_user(user_id):
                 return None
             keys = [d[0] for d in cursor.description]
             user = dict(zip(keys, row))
-            for k in ['fighters','drones','missiles','defenses']:
+            for k in ['fighters', 'drones', 'missiles', 'defenses']:
                 user[k] = json.loads(user[k]) if user[k] else {}
-            return user['last_free_box'] = user['last_free_box'] or 0
+            user['last_free_box'] = user['last_free_box'] or 0
             return user
 
 async def create_user(user_id):
@@ -48,7 +48,7 @@ async def update_user(user_id, **kwargs):
         sets, values = [], []
         for k, v in kwargs.items():
             sets.append(f"{k}=?")
-            values.append(json.dumps(v, ensure_ascii=False) if isinstance(v, (dict,list)) else v)
+            values.append(json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v)
         values.append(user_id)
         await db.execute(f"UPDATE users SET {', '.join(sets)} WHERE user_id=?", values)
         await db.commit()
