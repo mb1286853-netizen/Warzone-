@@ -1,3 +1,5 @@
+from aiogram import Router
+router = Router()
 from aiogram import Router, types
 from database import get_user, update_user
 import time
